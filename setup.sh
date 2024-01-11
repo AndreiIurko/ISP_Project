@@ -13,7 +13,7 @@ if [ -e "$l_debian" ]; then
     echo "$l_debian exists"
 else
     echo "$l_debian doesn't exist, please download and unpack using the following link"
-    echo "https://sourceforge.net/projects/osboxes/files/v/vb/46-Q-s/1.8.7/Q4OS_1.8.7-VB-64bit.7z/download"
+    echo "https://sourceforge.net/projects/osboxes/files/v/vb/46-Q-s/4.8/Trinity/64bit.7z/download"
     exit 1
     # wget https://distro.ibiblio.org/puppylinux/puppy-bionic/bionicpup64/bionicpup64-8.0-uefi.iso
     # if [ $? -eq 0 ]; then
@@ -108,20 +108,20 @@ ip link set br_ix up
 #     -netdev tap,id=companies_router,ifname=tap_companies_r,script=no,downscript=no -device e1000,netdev=companies_router,mac=22:f1:a8:05:b4:36 \
 
 # qemu-system-x86_64 -drive file=vm3.qcow2 -m 700M -enable-kvm -boot menu=on \
-#     -netdev tap,id=user_1,ifname=tap_user_1,script=no,downscript=no -device e1000,netdev=user_1,mac=32:b1:b8:f5:a53:d2
+#     -netdev tap,id=user_1,ifname=tap_user_1,script=no,downscript=no -device e1000,netdev=user_1,mac=32:b1:b8:f5:53:d2
 
 # qemu-system-x86_64 -drive file=vm4.qcow2 -m 700M -enable-kvm -boot menu=on \
 #     -netdev tap,id=company_1,ifname=tap_company_1,script=no,downscript=no -device e1000,netdev=company_1,mac=42:a6:b3:94:61:8f
 
 
-# pkill dnsmasq
-# dnsmasq --interface=br_private --bind-interfaces --dhcp-range=10.203.0.2,10.203.127.254
+pkill dnsmasq
+dnsmasq --interface=br_private --bind-interfaces --dhcp-range=10.203.0.2,10.203.127.254
 
 
 # uncomment below lines to allow internet access
 # replace wlx502b73c902c9 with your wireless iface
 
-# sysctl net.ipv4.ip_forward=1
-# sudo iptables -A FORWARD -i br_private -o wlx502b73c902c9 -j ACCEPT
-# sudo iptables -A FORWARD -o br_private -i wlx502b73c902c9 -j ACCEPT
-# sudo iptables -t nat -A POSTROUTING -o wlx502b73c902c9 -j MASQUERADE
+sysctl net.ipv4.ip_forward=1
+sudo iptables -A FORWARD -i br_private -o wlx502b73c902c9 -j ACCEPT
+sudo iptables -A FORWARD -o br_private -i wlx502b73c902c9 -j ACCEPT
+sudo iptables -t nat -A POSTROUTING -o wlx502b73c902c9 -j MASQUERADE

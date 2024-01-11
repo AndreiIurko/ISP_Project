@@ -1,3 +1,7 @@
+# before removing internet connection
+# apt update
+# apt install bird
+
 # init ifaces
 
 ip a add 10.203.0.1/17 dev ens3
