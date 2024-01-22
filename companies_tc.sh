@@ -2,10 +2,10 @@
 
 
 # List of MAC and quota pairs
-mac_quota_pairs=("32:11:b8:f5:53:d2 1000")
+ip_quota_pairs=("10.203.128.2 fc00:2003::8000:2 1000")
 
 # List of MAC and bandwidth in kbits/s
-mac_speed_pairs=("32:22:b8:f5:53:d2 500")
+ip_speed_pairs=("10.203.128.3 fc00:2003::8000:3 500")
 
 LAN=ens3
 NETCARD=ens4
@@ -27,11 +27,12 @@ tc class add dev $NETCARD parent 1:0 classid 1:9999 htb rate $(( $MAXBANDWIDTH )
 tc class add dev $LAN parent 1:0 classid 1:9999 htb rate $(( $MAXBANDWIDTH ))kbit ceil $(( $MAXBANDWIDTH ))kbit burst 100k prio 9999
 
 mark=0
-# Iterate over each MAC and speed pairs for speed limitations
-for pair in "${mac_speed_pairs[@]}"; do
+# Iterate over each IP and speed pairs for speed limitations
+for pair in "${ip_speed_pairs[@]}"; do
     # Extract MAC address and integer from the pair
-    mac=$(echo "$pair" | awk '{print $1}')
-    bandwidth=$(echo "$pair" | awk '{print $2}')
+    ipv4=$(echo "$pair" | awk '{print $1}')
+    ipv6=$(echo "$pair" | awk '{print $2}')
+    bandwidth=$(echo "$pair" | awk '{print $3}')
 
     mark=$(( mark + 1 ))
 
@@ -50,22 +51,28 @@ for pair in "${mac_speed_pairs[@]}"; do
     tc filter add dev $LAN parent 1:0 protocol ipv6 prio $((mark+32768)) handle $mark fw flowid 1:$mark
 
     # netfilter packet marking rule
-    iptables -t mangle -A PREROUTING -i $NETCARD -m mac --mac-source $mac -j CONNMARK --set-mark $mark
-    ip6tables -t mangle -A PREROUTING -i $NETCARD -m mac --mac-source $mac -j CONNMARK --set-mark $mark
+    iptables -t mangle -A PREROUTING -s $ipv4 -j MARK --set-mark $mark
+    iptables -t mangle -A PREROUTING -d $ipv4 -j MARK --set-mark $mark
+    ip6tables -t mangle -A PREROUTING -s $ipv6 -j MARK --set-mark $mark
+    ip6tables -t mangle -A PREROUTING -d $ipv6 -j MARK --set-mark $mark
 
-    echo "MAC $mac is attached to mark $mark and limited to $bandwidth kbps"
+    echo "IP $ipv4 / $ipv6 is attached to mark $mark and limited to $bandwidth kbps"
 done
 
 # Iterate over each MAC and quota pairs for usage per month limitations
 # 2^24
 mark=16777216
-for pair in "${mac_quota_pairs[@]}"; do
+for pair in "${ip_quota_pairs[@]}"; do
     # Extract MAC address and quota from the pair
-    mac=$(echo "$pair" | awk '{print $1}')
-    quota=$(echo "$pair" | awk '{print $2}')
+    ipv4=$(echo "$pair" | awk '{print $1}')
+    ipv6=$(echo "$pair" | awk '{print $2}')
+    quota=$(echo "$pair" | awk '{print $3}')
     mark=$(( mark + 1 ))
 
-    iptables -t mangle -A PREROUTING -i $NETCARD -m mac --mac-source $mac -j CONNMARK --set-mark $mark
+    iptables -t mangle -A PREROUTING -s $ipv4 -j MARK --set-mark $mark
+    iptables -t mangle -A PREROUTING -d $ipv4 -j MARK --set-mark $mark
+    ip6tables -t mangle -A PREROUTING -s $ipv6 -j MARK --set-mark $mark
+    ip6tables -t mangle -A PREROUTING -d $ipv6 -j MARK --set-mark $mark
 
     iptables -X FILTER_QUOTA_$mark
     iptables -N FILTER_QUOTA_$mark
@@ -75,8 +82,6 @@ for pair in "${mac_quota_pairs[@]}"; do
     iptables -A FILTER_QUOTA_$mark -m quota --quota $quota -j ACCEPT
     iptables -A FILTER_QUOTA_$mark -j DROP
 
-    ip6tables -t mangle -A PREROUTING -i $NETCARD -m mac --mac-source $mac -j CONNMARK --set-mark $mark
-
     ip6tables -X FILTER_QUOTA_$mark
     ip6tables -N FILTER_QUOTA_$mark
 
@@ -85,14 +90,5 @@ for pair in "${mac_quota_pairs[@]}"; do
     ip6tables -A FILTER_QUOTA_$mark -m quota --quota $quota -j ACCEPT
     ip6tables -A FILTER_QUOTA_$mark -j DROP
 
-    echo "MAC $mac is attached to mark $mark and limited to $quota bytes"
+    echo "IP $ipv4 / $ipv6 is attached to mark $mark and limited to $quota bytes"
 done
-
-# for restoring mark
-iptables -t mangle -A PREROUTING -j CONNMARK --restore-mark
-iptables -t mangle -A OUTPUT -j CONNMARK --restore-mark
-iptables -t mangle -A POSTROUTING -j CONNMARK --save-mark
-
-ip6tables -t mangle -A PREROUTING -j CONNMARK --restore-mark
-ip6tables -t mangle -A OUTPUT -j CONNMARK --restore-mark
-ip6tables -t mangle -A POSTROUTING -j CONNMARK --save-mark
