@@ -16,3 +16,5 @@ echo 1 > /proc/sys/net/ipv6/conf/all/accept_redirects
 # base forwarding through bgp router
 ip ro add default via 10.203.0.1
 ip -6 ro add default via FC00:2003::1
+
+# for vpn configuration see https://www.cyberciti.biz/faq/howto-setup-openvpn-server-on-ubuntu-linux-14-04-or-16-04-lts/

@@ -12,10 +12,6 @@ NETCARD=ens4
 MAXBANDWIDTH="10000000"
 
 # reinit
-iptables -F
-iptables -t mangle -F
-ip6tables -F
-ip6tables -t mangle -F
 tc qdisc del dev $NETCARD root handle 1
 tc qdisc add dev $NETCARD root handle 1: htb default 9999
 
@@ -51,6 +47,11 @@ for pair in "${ip_speed_pairs[@]}"; do
     tc filter add dev $LAN parent 1:0 protocol ipv6 prio $((mark+32768)) handle $mark fw flowid 1:$mark
 
     # netfilter packet marking rule
+    iptables -t mangle -D PREROUTING -s $ipv4 -j MARK --set-mark $mark
+    iptables -t mangle -D PREROUTING -d $ipv4 -j MARK --set-mark $mark
+    ip6tables -t mangle -D PREROUTING -s $ipv6 -j MARK --set-mark $mark
+    ip6tables -t mangle -D PREROUTING -d $ipv6 -j MARK --set-mark $mark
+
     iptables -t mangle -A PREROUTING -s $ipv4 -j MARK --set-mark $mark
     iptables -t mangle -A PREROUTING -d $ipv4 -j MARK --set-mark $mark
     ip6tables -t mangle -A PREROUTING -s $ipv6 -j MARK --set-mark $mark
@@ -69,26 +70,34 @@ for pair in "${ip_quota_pairs[@]}"; do
     quota=$(echo "$pair" | awk '{print $3}')
     mark=$(( mark + 1 ))
 
+    iptables -t mangle -D PREROUTING -s $ipv4 -j MARK --set-mark $mark
+    iptables -t mangle -D PREROUTING -d $ipv4 -j MARK --set-mark $mark
+    ip6tables -t mangle -D PREROUTING -s $ipv6 -j MARK --set-mark $mark
+    ip6tables -t mangle -D PREROUTING -d $ipv6 -j MARK --set-mark $mark
+
     iptables -t mangle -A PREROUTING -s $ipv4 -j MARK --set-mark $mark
     iptables -t mangle -A PREROUTING -d $ipv4 -j MARK --set-mark $mark
     ip6tables -t mangle -A PREROUTING -s $ipv6 -j MARK --set-mark $mark
     ip6tables -t mangle -A PREROUTING -d $ipv6 -j MARK --set-mark $mark
 
+    
+    iptables -D FORWARD -m mark --mark $mark -g FILTER_QUOTA_$mark
+    iptables -F FILTER_QUOTA_$mark
     iptables -X FILTER_QUOTA_$mark
+
     iptables -N FILTER_QUOTA_$mark
-
-    iptables -A FORWARD -m mark --mark $mark -g FILTER_QUOTA_$mark
-
     iptables -A FILTER_QUOTA_$mark -m quota --quota $quota -j ACCEPT
     iptables -A FILTER_QUOTA_$mark -j DROP
+    iptables -A FORWARD -m mark --mark $mark -g FILTER_QUOTA_$mark
 
+    ip6tables -D FORWARD -m mark --mark $mark -g FILTER_QUOTA_$mark
+    ip6tables -F FILTER_QUOTA_$mark
     ip6tables -X FILTER_QUOTA_$mark
+    
     ip6tables -N FILTER_QUOTA_$mark
-
-    ip6tables -A FORWARD -m mark --mark $mark -g FILTER_QUOTA_$mark
-
     ip6tables -A FILTER_QUOTA_$mark -m quota --quota $quota -j ACCEPT
     ip6tables -A FILTER_QUOTA_$mark -j DROP
+    ip6tables -A FORWARD -m mark --mark $mark -g FILTER_QUOTA_$mark
 
     echo "IP $ipv4 / $ipv6 is attached to mark $mark and limited to $quota bytes"
 done

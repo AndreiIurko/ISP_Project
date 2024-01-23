@@ -32,7 +32,6 @@ ip tuntap add dev tap_companies mode tap user $(who | awk '{print $1}' | sort -u
 ip link set tap_companies up
 
 ip link add br_private type bridge
-ip a add fc00:2003::1/97 dev br_private
 ip link set tap_users master br_private
 ip link set tap_companies master br_private
 ip link set br_private up
@@ -133,9 +132,13 @@ ip link set br_companies up
 # these commands for connecting VMs and host
 # replace wlp2s0 with your wireless iface
 ip a add 10.203.0.1/17 dev br_private
+ip a add fc00:2003::1/97 dev br_private
 ip a add 10.10.10.203/24 dev wlp2s0
 sysctl net.ipv4.ip_forward=1
 sysctl net.bridge.bridge-nf-call-iptables=0
+sysctl net.ipv6.conf.all.forwarding=1
+sysctl net.ipv6.conf.all.accept_ra=2
+sysctl net.ipv6.conf.all.accept_redirects=1
 iptables -A FORWARD -i br_private -o wlp2s0 -j ACCEPT
 iptables -A FORWARD -o br_private -i wlp2s0 -j ACCEPT
 
