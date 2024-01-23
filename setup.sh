@@ -15,13 +15,6 @@ else
     echo "$l_debian doesn't exist, please download and unpack using the following link"
     echo "https://sourceforge.net/projects/osboxes/files/v/vb/46-Q-s/4.8/Trinity/64bit.7z/download"
     exit 1
-    # wget https://distro.ibiblio.org/puppylinux/puppy-bionic/bionicpup64/bionicpup64-8.0-uefi.iso
-    # if [ $? -eq 0 ]; then
-    #     echo "Done."
-    # else
-    #     echo "Failed to download the file $file_to_download."
-    #     exit 1
-    # fi
 fi
 
 if command -v qemu-img &> /dev/null ; then
@@ -38,15 +31,10 @@ ip link set tap_users up
 ip tuntap add dev tap_companies mode tap user $(who | awk '{print $1}' | sort -u)
 ip link set tap_companies up
 
-ip tuntap add dev tap_bgp mode tap user $(who | awk '{print $1}' | sort -u)
-ip link set tap_bgp up
-
 ip link add br_private type bridge
-ip a add 10.203.0.1/17 dev br_private
 ip a add fc00:2003::1/97 dev br_private
 ip link set tap_users master br_private
 ip link set tap_companies master br_private
-ip link set tap_bgp master br_private
 ip link set br_private up
 
 # init hub for users network and tap ifaces for user router and users
@@ -90,6 +78,11 @@ ip link set tap_company_3 master br_companies
 ip link set br_companies up
 
 # this is for bgp testing - usually this script assumes that BGP should be on host, but sometimes it is easier to test using VM
+
+# ip tuntap add dev tap_bgp mode tap user $(who | awk '{print $1}' | sort -u)
+# ip link set tap_bgp up
+# ip link set tap_bgp master br_private
+
 # ip tuntap add dev tap_bgp_r_out mode tap user $(who | awk '{print $1}' | sort -u)
 # ip link set tap_bgp_r_out up
 
@@ -101,14 +94,14 @@ ip link set br_companies up
 # ip link set tap_bgp_peer master br_ix
 # ip link set br_ix up
 
-# theese commands is for qemu initialisation 
+# these commands is for qemu initialisation 
 # qemu-img convert -f vdi -O qcow2 'Q4OS 4.8 Trinity (64bit).vdi' vm1.qcow2
 
-# qemu-system-x86_64 -drive file=vm5.qcow2 -m 700M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=bgp_router.qcow2 -m 700M -enable-kvm -boot menu=on \
 #     -netdev tap,id=bgp,ifname=tap_bgp,script=no,downscript=no -device e1000,netdev=bgp,mac=52:17:ca:f4:d6:e5 \
 #     -netdev tap,id=bgp_r_out,ifname=tap_bgp_r_out,script=no,downscript=no -device e1000,netdev=bgp_r_out,mac=52:80:c1:fa:07:8c
 
-# qemu-system-x86_64 -drive file=vm6.qcow2 -m 700M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=bgp_peer.qcow2 -m 700M -enable-kvm -boot menu=on \
 #     -netdev tap,id=bgp_peer,ifname=tap_bgp_peer,script=no,downscript=no -device e1000,netdev=bgp_peer,mac=62:95:c1:aa:8d:36
 
 # qemu-system-x86_64 -drive file=users_router.qcow2 -m 1024M -enable-kvm -boot menu=on \
@@ -137,8 +130,10 @@ ip link set br_companies up
 # qemu-system-x86_64 -drive file=company_3.qcow2 -m 1024M -enable-kvm -boot menu=on \
 #     -netdev tap,id=company_3,ifname=tap_company_3,script=no,downscript=no -device e1000,netdev=company_3,mac=42:33:b3:94:61:8f
 
+# these commands for connecting VMs and host
 # replace wlp2s0 with your wireless iface
-sudo ip a add 10.10.10.203/24 dev wlp2s0
+ip a add 10.203.0.1/17 dev br_private
+ip a add 10.10.10.203/24 dev wlp2s0
 sysctl net.ipv4.ip_forward=1
 sysctl net.bridge.bridge-nf-call-iptables=0
 iptables -A FORWARD -i br_private -o wlp2s0 -j ACCEPT
@@ -148,7 +143,8 @@ ip ro add 10.203.128.0/17 via 10.203.0.3
 ip -6 ro add fc00:2003:0:0:0:0:8000:0/97 via fc00:2003::3;
 
 # uncomment for internet connection
-#iptables -t nat -A POSTROUTING -o wlp2s0 -j MASQUERADE
+# iptables -t nat -A POSTROUTING -o wlp2s0 -j MASQUERADE
+# ip6tables -t nat -A POSTROUTING -o wlp2s0 -j MASQUERADE
 
 # for dns configuration copy dnsmasq.conf in /etc/dnsmasq.conf and edit to add path to hosts file
 
@@ -202,18 +198,21 @@ protocol device {
 # direct routes to all network interfaces. Can exist in as many instances as you
 # wish if you want to populate multiple routing tables with direct routes.
 protocol direct {
-	disabled;		# Disable by default
-	ipv4;			# Connect to default IPv4 table
-	ipv6;			# ... and to default IPv6 table
+#	disabled;		# Disable by default
+#	ipv4;			# Connect to default IPv4 table
+#	ipv6;			# ... and to default IPv6 table
 }
 
 protocol kernel {
-	ipv4;
+	ipv4 { export all; };
 	learn;
 }
 
 protocol kernel {
-	ipv6;
+	ipv6 {
+		import all; 
+		export all; 
+	};
 	learn;
 }
 
@@ -222,13 +221,15 @@ protocol kernel {
 protocol static ipv4_routes {		
 	ipv4;
 	route 10.203.0.2/32 via 10.203.0.1;
-	route 10.203.128.0/17 via 10.203.0.1;
+	route 10.203.0.3/32 via 10.203.0.1;
+	route 10.203.128.0/17 via 10.203.0.3;
 }
 
 protocol static ipv6_routes {
 	ipv6;
 	route fc00:2003::2/128 via fc00:2003::1;
-	route fc00:2003::8000:0/97 via fc00:2003::1;
+	route fc00:2003::3/128 via fc00:2003::1;
+	route fc00:2003::8000:0/97 via fc00:2003::3;
 }
 
 filter rt_import_4
@@ -273,6 +274,7 @@ protocol bgp peer_8 {
 	};
 
 }
+
 EOF
 
 pkill bird
