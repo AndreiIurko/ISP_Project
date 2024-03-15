@@ -1,12 +1,7 @@
 #!/bin/bash
 
-if command -v wget &> /dev/null; then
-	echo "Wget is already installed"
-else
-	echo "Istalling wget"
-	apt-get install wget
-fi
-
+# Define the lightweight debian image
+# You can use any other linux image, however some scripts rely on apt-get package manager
 l_debian='Q4OS 4.8 Trinity (64bit).vdi'
 
 if [ -e "$l_debian" ]; then
@@ -17,6 +12,7 @@ else
     exit 1
 fi
 
+# install qemu for virtualisation of users, clients and routers
 if command -v qemu-img &> /dev/null ; then
 	echo "Qemu is already istalled"
 else
@@ -93,40 +89,44 @@ ip link set br_companies up
 # ip link set tap_bgp_peer master br_ix
 # ip link set br_ix up
 
-# these commands is for qemu initialisation 
-# qemu-img convert -f vdi -O qcow2 'Q4OS 4.8 Trinity (64bit).vdi' vm1.qcow2
+# these commands is for qemu initialisation
+# use this command for converting image into qemu disc
 
-# qemu-system-x86_64 -drive file=bgp_router.qcow2 -m 700M -enable-kvm -boot menu=on \
+# qemu-img convert -f vdi -O qcow2 'Q4OS 4.8 Trinity (64bit).vdi' users_dir/users_router.qcow2
+
+# use these commands for running VMs
+
+# qemu-system-x86_64 -drive file=bgp_dir/bgp_router.qcow2 -m 700M -enable-kvm -boot menu=on \
 #     -netdev tap,id=bgp,ifname=tap_bgp,script=no,downscript=no -device e1000,netdev=bgp,mac=52:17:ca:f4:d6:e5 \
 #     -netdev tap,id=bgp_r_out,ifname=tap_bgp_r_out,script=no,downscript=no -device e1000,netdev=bgp_r_out,mac=52:80:c1:fa:07:8c
 
-# qemu-system-x86_64 -drive file=bgp_peer.qcow2 -m 700M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=bgp_dir/bgp_peer.qcow2 -m 700M -enable-kvm -boot menu=on \
 #     -netdev tap,id=bgp_peer,ifname=tap_bgp_peer,script=no,downscript=no -device e1000,netdev=bgp_peer,mac=62:95:c1:aa:8d:36
 
-# qemu-system-x86_64 -drive file=users_router.qcow2 -m 1024M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=users_dir/users_router.qcow2 -m 1024M -enable-kvm -boot menu=on \
 #     -netdev tap,id=users,ifname=tap_users,script=no,downscript=no -device e1000,netdev=users,mac=12:ac:73:a9:e1:98 \
 #     -netdev tap,id=users_router,ifname=tap_users_r,script=no,downscript=no -device e1000,netdev=users_router,mac=12:17:b1:9c:33:f4 
 
-# qemu-system-x86_64 -drive file=companies_router.qcow2 -m 1024M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=companies_dir/companies_router.qcow2 -m 1024M -enable-kvm -boot menu=on \
 #     -netdev tap,id=companies,ifname=tap_companies,script=no,downscript=no -device e1000,netdev=companies,mac=22:b1:f9:12:0a:cc \
 #     -netdev tap,id=companies_router,ifname=tap_companies_r,script=no,downscript=no -device e1000,netdev=companies_router,mac=22:f1:a8:05:b4:36 \
 
-# qemu-system-x86_64 -drive file=user_1.qcow2 -m 1024M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=users_dir/user_1.qcow2 -m 1024M -enable-kvm -boot menu=on \
 #     -netdev tap,id=user_1,ifname=tap_user_1,script=no,downscript=no -device e1000,netdev=user_1,mac=32:11:b8:f5:53:d2
 
-# qemu-system-x86_64 -drive file=user_2.qcow2 -m 1024M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=users_dir/user_2.qcow2 -m 1024M -enable-kvm -boot menu=on \
 #     -netdev tap,id=user_2,ifname=tap_user_2,script=no,downscript=no -device e1000,netdev=user_2,mac=32:22:b8:f5:53:d2
 
-# qemu-system-x86_64 -drive file=user_3.qcow2 -m 1024M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=users_dir/user_3.qcow2 -m 1024M -enable-kvm -boot menu=on \
 #     -netdev tap,id=user_3,ifname=tap_user_3,script=no,downscript=no -device e1000,netdev=user_3,mac=32:33:b8:f5:53:d2
 
-# qemu-system-x86_64 -drive file=company_1.qcow2 -m 1024M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=companies_dir/company_1.qcow2 -m 1024M -enable-kvm -boot menu=on \
 #     -netdev tap,id=company_1,ifname=tap_company_1,script=no,downscript=no -device e1000,netdev=company_1,mac=42:11:b3:94:61:8f
 
-# qemu-system-x86_64 -drive file=company_2.qcow2 -m 1024M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=companies_dir/company_2.qcow2 -m 1024M -enable-kvm -boot menu=on \
 #     -netdev tap,id=company_2,ifname=tap_company_2,script=no,downscript=no -device e1000,netdev=company_2,mac=42:22:b3:94:61:8f
 
-# qemu-system-x86_64 -drive file=company_3.qcow2 -m 1024M -enable-kvm -boot menu=on \
+# qemu-system-x86_64 -drive file=companies_dir/company_3.qcow2 -m 1024M -enable-kvm -boot menu=on \
 #     -netdev tap,id=company_3,ifname=tap_company_3,script=no,downscript=no -device e1000,netdev=company_3,mac=42:33:b3:94:61:8f
 
 # these commands for connecting VMs and host
@@ -134,11 +134,14 @@ ip link set br_companies up
 ip a add 10.203.0.1/17 dev br_private
 ip a add fc00:2003::1/97 dev br_private
 ip a add 10.10.10.203/24 dev wlp2s0
+# for ipv4 forwarding
 sysctl net.ipv4.ip_forward=1
+# disable processing of packets crossing the bridge by iptables
+# if not disabled packets send from users and companies will be processed in user_br and companies_br
 sysctl net.bridge.bridge-nf-call-iptables=0
+# for ipv6 forwarding
 sysctl net.ipv6.conf.all.forwarding=1
-sysctl net.ipv6.conf.all.accept_ra=2
-sysctl net.ipv6.conf.all.accept_redirects=1
+# enable flow between hub to wireless iface
 iptables -A FORWARD -i br_private -o wlp2s0 -j ACCEPT
 iptables -A FORWARD -o br_private -i wlp2s0 -j ACCEPT
 
@@ -152,6 +155,7 @@ ip -6 ro add fc00:2003:0:0:0:0:8000:0/97 via fc00:2003::3;
 # for dns configuration copy dnsmasq.conf in /etc/dnsmasq.conf and edit to add path to hosts file
 
 # init bgp
+# remove existing bird config
 rm /etc/bird/bird.conf
 
 cat > /etc/bird/bird.conf << EOF
@@ -223,34 +227,63 @@ protocol kernel {
 # families and to disable/enable various groups of static routes on the fly).
 protocol static ipv4_routes {		
 	ipv4;
-	route 10.203.0.2/32 via 10.203.0.1;
-	route 10.203.0.3/32 via 10.203.0.1;
+	route 10.203.0.2/32 via "br_private";
+	route 10.203.0.3/32 via "br_private";
 	route 10.203.128.0/17 via 10.203.0.3;
 }
 
 protocol static ipv6_routes {
 	ipv6;
-	route fc00:2003::2/128 via fc00:2003::1;
-	route fc00:2003::3/128 via fc00:2003::1;
+	route fc00:2003::2/128 via "br_private";
+	route fc00:2003::3/128 via "br_private";
 	route fc00:2003::8000:0/97 via fc00:2003::3;
 }
 
-filter rt_import_4
+filter team_200
 {
-	if (net = 10.203.0.0/16) then
-	{
-		reject;
-	}
-	if (net = 172.16.0.0/12) then
-	{
-		reject;
-	}
-	if (net = 192.168.0.0/16) then
-	{
-		reject;
-	}
-	accept;
+	if (net ~ [10.200.0.0/16{16,32}]) then accept;
+	reject;
 }
+
+filter team_201
+{
+	if (net ~ [10.201.0.0/16{16,32}]) then accept;
+	reject;
+}
+
+filter team_202
+{
+	if (net ~ [10.202.0.0/16{16,32}]) then accept;
+	reject;
+}
+
+filter team_204
+{
+	if (net ~ [10.204.0.0/16{16,32}]) then accept;
+	reject;
+}
+
+filter team_205
+{
+	if (net ~ [10.205.0.0/16{16,32}]) then accept;
+	reject;
+}
+filter team_206
+{
+	if (net ~ [10.206.0.0/16{16,32}]) then accept;
+	reject;
+}
+filter team_207
+{
+	if (net ~ [10.207.0.0/16{16,32}]) then accept;
+	reject;
+}
+filter team_208
+{
+	if (net ~ [10.208.0.0/16{16,32}]) then accept;
+	reject;
+}
+
 
 filter rt_import_6
 {
@@ -267,7 +300,126 @@ protocol bgp peer_8 {
 	neighbor 10.10.10.208 as 65208;
 
 	ipv4 {			# regular IPv4 unicast (1/1)
-		import filter rt_import_4;
+		import filter team_208;
+		export where proto = "ipv4_routes";
+	};
+
+	ipv6 {			# regular IPv6 unicast (2/1)
+		import filter rt_import_6;
+		export where proto = "ipv6_routes";
+	};
+
+}
+
+protocol bgp peer_7 {
+	description "Peer team 207";
+	local as 65203;
+	neighbor 10.10.10.207 as 65207;
+
+	ipv4 {			# regular IPv4 unicast (1/1)
+		import filter team_207;
+		export where proto = "ipv4_routes";
+	};
+
+	ipv6 {			# regular IPv6 unicast (2/1)
+		import filter rt_import_6;
+		export where proto = "ipv6_routes";
+	};
+
+}
+
+protocol bgp peer_6 {
+	description "Peer team 206";
+	local as 65203;
+	neighbor 10.10.10.206 as 65206;
+
+	ipv4 {			# regular IPv4 unicast (1/1)
+		import filter team_206;
+		export where proto = "ipv4_routes";
+	};
+
+	ipv6 {			# regular IPv6 unicast (2/1)
+		import filter rt_import_6;
+		export where proto = "ipv6_routes";
+	};
+
+}
+
+protocol bgp peer_5 {
+	description "Peer team 205";
+	local as 65203;
+	neighbor 10.10.10.205 as 65205;
+
+	ipv4 {			# regular IPv4 unicast (1/1)
+		import filter team_205;
+		export where proto = "ipv4_routes";
+	};
+
+	ipv6 {			# regular IPv6 unicast (2/1)
+		import filter rt_import_6;
+		export where proto = "ipv6_routes";
+	};
+
+}
+
+protocol bgp peer_4 {
+	description "Peer team 204";
+	local as 65203;
+	neighbor 10.10.10.204 as 65204;
+
+	ipv4 {			# regular IPv4 unicast (1/1)
+		import filter team_204;
+		export where proto = "ipv4_routes";
+	};
+
+	ipv6 {			# regular IPv6 unicast (2/1)
+		import filter rt_import_6;
+		export where proto = "ipv6_routes";
+	};
+
+}
+
+protocol bgp peer_2 {
+	description "Peer team 202";
+	local as 65203;
+	neighbor 10.10.10.202 as 65202;
+
+	ipv4 {			# regular IPv4 unicast (1/1)
+		import filter team_202;
+		export where proto = "ipv4_routes";
+	};
+
+	ipv6 {			# regular IPv6 unicast (2/1)
+		import filter rt_import_6;
+		export where proto = "ipv6_routes";
+	};
+
+}
+
+protocol bgp peer_1 {
+	description "Peer team 201";
+	local as 65203;
+	neighbor 10.10.10.201 as 65201;
+
+	ipv4 {			# regular IPv4 unicast (1/1)
+		import filter team_201;
+		export where proto = "ipv4_routes";
+	};
+
+	ipv6 {			# regular IPv6 unicast (2/1)
+		import filter rt_import_6;
+		export where proto = "ipv6_routes";
+	};
+
+}
+
+protocol bgp peer_0 {
+	description "Peer team 200";
+	local as 65203;
+	neighbor 10.10.10.200 as 65200;
+
+	ipv4 {			# regular IPv4 unicast (1/1)
+		import filter team_200;
 		export where proto = "ipv4_routes";
 	};
 
@@ -280,5 +432,6 @@ protocol bgp peer_8 {
 
 EOF
 
+# run bird
 pkill bird
 bird
